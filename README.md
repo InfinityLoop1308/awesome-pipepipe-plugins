@@ -20,7 +20,7 @@ A community-curated list of third-party plugins for [PipePipe](https://github.co
 
 | Plugin | Description | Author | Source |
 | ------ | ----------- | ------ | ------ |
-| _None yet_ | Be the first to submit one | | |
+| Twitch | Provides access to Twitch, the well-known streaming service | Jonas Mohr | https://github.com/MohrJonas/TwitchPipePipePlugin |
 
 The official plugins live in a separate, built-in repository and do not need to be added.
 

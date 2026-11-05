@@ -1,5 +1,20 @@
 {
   "formatVersion": 1,
   "name": "Awesome PipePipe Plugins",
-  "plugins": []
+  "plugins": [
+    {
+      "pluginId": "mohr.jonas.twitch",
+      "name": "Twitch",
+      "versionCode": 2,
+      "versionName": "1.1.0",
+      "apiVersion": "1.0",
+      "author": "Jonas Mohr",
+      "package": "https://github.com/MohrJonas/TwitchPipePipePlugin/releases/download/repo/twitch-2.ppp",
+      "sha256": "904baf770f9f22652b44dfe64eba41b1ceac2795bdd27dab6a330e08bc17c536",
+      "signature": "U3jU4jkVvUeJpYSTPC2exFIZoIOlWsF1iMJj65/ISGze9+bd3ogC+6gk2ykynlKb/E7Fy5l7JNM8W2XRRVL0DA==",
+      "publicKey": "BHXTB1DqhMt9/MVbz63M5/YPOkEtuDPh72ueB4DqUsc=",
+      "description": "Provides access to Twitch, the well-known streaming service",
+      "nsfw": false
+    }
+  ]
 }
