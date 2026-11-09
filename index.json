@@ -15,6 +15,20 @@
       "publicKey": "BHXTB1DqhMt9/MVbz63M5/YPOkEtuDPh72ueB4DqUsc=",
       "description": "Provides access to Twitch, the well-known streaming service",
       "nsfw": false
+    },
+    {
+      "pluginId": "io.ksol.pipepipe.betterbandcamp",
+      "name": "BetterBandcamp",
+      "versionCode": 1,
+      "versionName": "1.0.0",
+      "apiVersion": "1.0",
+      "author": "László Károlyi",
+      "package": "https://git.ksol.io/karolyi/PipePipe-BetterBandcamp/releases/download/v1.0.0/betterbandcamp-1.ppp",
+      "sha256": "b39c908898358a08fa10344dde258684f1795c79ecd499541aa195b25eb0eb83",
+      "signature": "Kb7BwNnGfLoYul3lK4CLdyGazGz4UdPCUEu/8K6nEJoX0vnGqEt5eBZ4b2mBs78gvVmNbEGVAeNgwiY9PzoMDw==",
+      "publicKey": "YMuEpFuB3eNsCTo39hw8D5bDTktTD21zHdcxOxIUVcw=",
+      "description": "Bandcamp artists, albums, tracks and radio. Fork of the built-in Bandcamp plugin that hands Bandcamp's \"Client Challenge\" page to PipePipe's challenge web view, so you can pass it once and keep browsing.",
+      "nsfw": false
     }
   ]
 }
