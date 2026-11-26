@@ -1,0 +1,51 @@
+# Merges a plugin PR when "Check plugins" passed, otherwise labels it for a human.
+# Runs with write access, so it never checks out or executes code from the PR. The
+# result artifact is treated as data: the PR number it names is only used after
+# confirming that this PR's head commit is the commit the check ran on.
+name: Auto merge plugins
+
+on:
+  workflow_run:
+    workflows: ["Check plugins"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+jobs:
+  decide:
+    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion != 'cancelled'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: result
+          path: result
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+      - name: Merge or label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          pr=$(jq -r '.pr' result/result.json)
+          passed=$(jq -r '.passed' result/result.json)
+          [[ "$pr" =~ ^[0-9]+$ ]] || { echo "bad PR number"; exit 1; }
+          head=$(gh pr view "$pr" --json headRefOid,state,baseRefName \
+            --jq 'select(.state == "OPEN" and .baseRefName == "main") | .headRefOid')
+          if [ "$head" != "$RUN_SHA" ]; then
+            echo "PR $pr is not open on main at $RUN_SHA, nothing to do"; exit 0
+          fi
+          { echo "Automatic plugin check: [details]($RUN_URL)"; echo; head -c 60000 result/report.md; } > comment.md
+          if [ "$CONCLUSION" = "success" ] && [ "$passed" = "true" ]; then
+            gh pr comment "$pr" --body-file comment.md
+            gh pr merge "$pr" --squash --match-head-commit "$RUN_SHA"
+          else
+            gh pr edit "$pr" --add-label "needs review" || true
+            gh pr comment "$pr" --body-file comment.md
+          fi

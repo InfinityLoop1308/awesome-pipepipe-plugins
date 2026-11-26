@@ -33,6 +33,13 @@ The official plugins live in a separate, built-in repository and do not need to 
    - adds a row to the table above
 4. Link the plugin's source code in the PR. Closed-source plugins are not accepted.
 
+The first listing of a plugin is reviewed by a maintainer. After that, update PRs are merged automatically when the [check](.github/workflows/check.yml) passes. The check:
+
+- downloads `package` and checks its sha256, its signature and that its `plugin.json` matches the entry.
+- requires the PR to change only `index.json` and `README.md`, with a higher `versionCode`.
+
+PRs that add a plugin, change `source` or `publicKey`, remove a plugin or touch anything outside the plugin entries get the `needs review` label and wait for a maintainer, as do PRs whose check fails.
+
 ### Index entry format
 
 ```json
@@ -48,11 +55,12 @@ The official plugins live in a separate, built-in repository and do not need to 
   "signature": "<base64 Ed25519 signature of the raw sha256 digest>",
   "publicKey": "<base64 raw Ed25519 public key>",
   "description": "Short description",
-  "nsfw": false
+  "nsfw": false,
+  "source": "https://github.com/jane/myservice"
 }
 ```
 
-`description` and `nsfw` are optional. PipePipe pins the public key on first install and refuses updates signed with another key.
+`description` and `nsfw` are optional. `source` must be a public GitHub repository. PipePipe pins the public key on first install and refuses updates signed with another key.
 
 ### Rules
 
@@ -60,6 +68,7 @@ The official plugins live in a separate, built-in repository and do not need to 
 - No malware, ads injection or tracking.
 - Keep `versionCode` increasing with every release.
 - Entries may be removed if the plugin is abandoned, broken or found to be harmful.
+- Harmful plugins are added to `revoked` in `index.json` (`pluginId`, optional `maxVersionCode` and `reason`). PipePipe checks it on start and stops loading matching installed versions from the next start.
 
 ## License
 

@@ -1,0 +1,111 @@
+# Checks plugin entries in a pull request: the published package must match the entry
+# (sha256, signature, plugin.json). Updates of listed plugins that pass are merged by
+# automerge.yml. New plugins, source or key changes and edits outside plugin entries are
+# checked too, but left for a maintainer.
+#
+# The PR is untrusted: this workflow runs on `pull_request` with a read-only token, only
+# runs scripts from the base branch and reads the PR's index.json as data.
+name: Check plugins
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      entries: ${{ steps.plan.outputs.entries }}
+      manual: ${{ steps.plan.outputs.manual }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: pr
+          persist-credentials: false
+      - name: List changed files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --paginate --jq '.[].filename' > files.txt
+      - id: plan
+        run: |
+          python3 base/.github/scripts/plan.py base/index.json pr/index.json files.txt plan.md
+      - if: always()
+        run: cat plan.md >> "$GITHUB_STEP_SUMMARY" || true
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: report-plan
+          path: plan.md
+          if-no-files-found: ignore
+
+  verify:
+    needs: plan
+    if: needs.plan.outputs.entries != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        entry: ${{ fromJSON(needs.plan.outputs.entries) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - run: pip install --quiet cryptography
+      - name: Verify
+        env:
+          ENTRY: ${{ toJSON(matrix.entry) }}
+        run: |
+          printf '%s' "$ENTRY" > entry.json
+          python3 .github/scripts/verify.py entry.json report.md
+      - if: always()
+        run: cat report.md >> "$GITHUB_STEP_SUMMARY" || true
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: report-${{ matrix.entry.pluginId }}
+          path: report.md
+          if-no-files-found: ignore
+
+  # Records the verdict for automerge.yml. `manual` PRs fail here on purpose so they
+  # get the `needs review` label.
+  result:
+    needs: [plan, verify]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: report-*
+          path: reports
+      - name: Write result
+        env:
+          PASSED: ${{ needs.plan.result == 'success' && needs.verify.result == 'success' && needs.plan.outputs.manual == 'false' }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          mkdir result
+          printf '{"pr": %s, "headSha": "%s", "passed": %s}\n' "$PR" "$HEAD_SHA" "$PASSED" > result/result.json
+          find reports -name '*.md' | sort | xargs -r cat > result/report.md
+          cat result/result.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: result
+          path: result
+      - name: Fail unless passed
+        if: needs.plan.result != 'success' || needs.verify.result != 'success' || needs.plan.outputs.manual != 'false'
+        run: exit 1
